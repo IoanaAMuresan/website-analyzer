@@ -224,6 +224,17 @@
             font-style: italic;
         }
 
+        .source-location {
+            font-size: 0.8rem;
+            color: #059669;
+            background: #f0fdf4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
         .priority-high { border-left-color: #ef4444; }
         .priority-medium { border-left-color: #f59e0b; }
         .priority-low { border-left-color: #10b981; }
@@ -286,8 +297,6 @@
             border-radius: 8px;
             margin: 20px 0;
         }
-
-
     </style>
 </head>
 <body>
@@ -340,6 +349,7 @@
 
     <script>
         let analysisResults = {};
+        let siteAnalysisData = {};
 
         async function analyzeWebsite() {
             const urlInput = document.getElementById('urlInput');
@@ -370,7 +380,6 @@
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
                 showError('Analysis completed with limited data. Some checks may require direct site access.');
-                // Still show results even if there were errors
                 document.getElementById('results').classList.add('show');
                 document.getElementById('analyzedUrl').textContent = targetUrl;
             } finally {
@@ -388,41 +397,35 @@
                 content: []
             };
 
+            // Initialize site analysis data
+            siteAnalysisData = {
+                url: url,
+                hasHTTPS: url.startsWith('https://'),
+                urlLength: url.length,
+                domain: new URL(url).hostname,
+                isWordPressCom: new URL(url).hostname.includes('wordpress.com'),
+                pageData: null
+            };
+
             // Simulate network delay
             await new Promise(resolve => setTimeout(resolve, 1500));
 
-            // Try to fetch and analyze the page (will work for same-origin or CORS-enabled sites)
-            let doc = null;
-            let pageContent = '';
-            
+            // Try to fetch and analyze the actual page
             try {
-                // For demo purposes, we'll create analysis based on URL patterns and common issues
-                // In production, you'd want to use a proxy service or server-side analysis
-                
-                // URL-based analysis
-                analyzeUrlStructure(url, improvements);
-                
-                // Common WordPress.com recommendations
-                addWordPressRecommendations(url, improvements);
-                
-                // Performance recommendations
-                addPerformanceRecommendations(url, improvements);
-                
-                // SEO basics
-                addSEORecommendations(url, improvements);
-                
-                // UX recommendations
-                addUXRecommendations(url, improvements);
-                
-                // Accessibility recommendations
-                addAccessibilityRecommendations(url, improvements);
-
-                // Content recommendations
-                addContentRecommendations(url, improvements);
-                
+                await fetchAndAnalyzePage(url, improvements);
             } catch (error) {
-                console.log('CORS restriction - using URL-based analysis only');
+                console.log('Cannot fetch page directly - using URL-based analysis');
+                // Fallback to URL-based analysis
+                analyzeUrlStructure(url, improvements);
             }
+
+            // Add general recommendations based on analysis
+            addWordPressRecommendations(url, improvements);
+            addPerformanceRecommendations(url, improvements);
+            addSEORecommendations(url, improvements);
+            addUXRecommendations(url, improvements);
+            addAccessibilityRecommendations(url, improvements);
+            addContentRecommendations(url, improvements);
 
             // Compile results
             analysisResults = {
@@ -433,299 +436,268 @@
             displayResults();
         }
 
+        async function fetchAndAnalyzePage(url, improvements) {
+            try {
+                // Note: This will only work for same-origin or CORS-enabled sites
+                // For production, you'd want to use a proxy service
+                const response = await fetch(url, { mode: 'cors' });
+                const html = await response.text();
+                
+                // Parse HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                siteAnalysisData.pageData = doc;
+
+                // Analyze specific elements
+                analyzeTitleTags(doc, improvements);
+                analyzeMetaDescriptions(doc, improvements);
+                analyzeImages(doc, improvements);
+                analyzeHeadings(doc, improvements);
+                analyzeLinks(doc, improvements);
+                analyzeForms(doc, improvements);
+                
+            } catch (error) {
+                // If we can't fetch the page, fall back to URL analysis
+                analyzeUrlStructure(url, improvements);
+                throw error;
+            }
+        }
+
+        function analyzeTitleTags(doc, improvements) {
+            const titleElement = doc.querySelector('title');
+            if (!titleElement) {
+                improvements.seo.push({
+                    text: 'Missing page title - add a descriptive title tag',
+                    reference: 'WordPress SEO best practices',
+                    location: '<head> section - no <title> tag found'
+                });
+            } else {
+                const titleText = titleElement.textContent.trim();
+                if (titleText.length === 0) {
+                    improvements.seo.push({
+                        text: 'Empty page title - add descriptive content to title tag',
+                        reference: 'WordPress SEO best practices',
+                        location: '<title> tag in <head> section'
+                    });
+                } else if (titleText.length > 60) {
+                    improvements.seo.push({
+                        text: 'Page title is too long (over 60 characters) - consider shortening',
+                        reference: 'Google SERP optimization guide',
+                        location: `<title> tag: "${titleText.substring(0, 50)}..."`
+                    });
+                }
+            }
+        }
+
+        function analyzeMetaDescriptions(doc, improvements) {
+            const metaDesc = doc.querySelector('meta[name="description"]');
+            if (!metaDesc) {
+                improvements.seo.push({
+                    text: 'Missing meta description - add one for better search results',
+                    reference: 'Google SEO best practices',
+                    location: '<head> section - no meta description found'
+                });
+            } else {
+                const content = metaDesc.getAttribute('content') || '';
+                if (content.length === 0) {
+                    improvements.seo.push({
+                        text: 'Empty meta description - add descriptive content',
+                        reference: 'Google SEO best practices',
+                        location: '<meta name="description"> tag in <head>'
+                    });
+                } else if (content.length > 160) {
+                    improvements.seo.push({
+                        text: 'Meta description is too long (over 160 characters)',
+                        reference: 'Google SERP optimization guide',
+                        location: `Meta description: "${content.substring(0, 50)}..."`
+                    });
+                }
+            }
+        }
+
+        function analyzeImages(doc, improvements) {
+            const images = doc.querySelectorAll('img');
+            let imagesWithoutAlt = 0;
+            let largeImages = 0;
+            
+            images.forEach((img, index) => {
+                if (!img.hasAttribute('alt') || img.getAttribute('alt').trim() === '') {
+                    imagesWithoutAlt++;
+                }
+                
+                // Check for potentially large images (basic heuristic)
+                const src = img.getAttribute('src');
+                if (src && (src.includes('full') || src.includes('large') || !src.includes('thumbnail'))) {
+                    largeImages++;
+                }
+            });
+
+            if (imagesWithoutAlt > 0) {
+                improvements.accessibility.push({
+                    text: `${imagesWithoutAlt} image(s) missing alt text for screen readers`,
+                    reference: 'WCAG 2.1 accessibility standards',
+                    location: `Found ${imagesWithoutAlt} img tags without alt attributes`
+                });
+            }
+
+            if (largeImages > 3) {
+                improvements.performance.push({
+                    text: 'Multiple large images detected - consider optimization',
+                    reference: 'Google PageSpeed Insights',
+                    location: `${largeImages} potentially large images found on page`
+                });
+            }
+        }
+
+        function analyzeHeadings(doc, improvements) {
+            const h1Tags = doc.querySelectorAll('h1');
+            const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
+            
+            if (h1Tags.length === 0) {
+                improvements.seo.push({
+                    text: 'No H1 heading found - add a main heading for better SEO',
+                    reference: 'SEO content structure guidelines',
+                    location: 'Page body - no <h1> tag detected'
+                });
+            } else if (h1Tags.length > 1) {
+                improvements.seo.push({
+                    text: 'Multiple H1 headings found - use only one H1 per page',
+                    reference: 'SEO content structure guidelines',
+                    location: `${h1Tags.length} <h1> tags found on page`
+                });
+            }
+
+            if (headings.length < 3) {
+                improvements.content.push({
+                    text: 'Limited heading structure - add more subheadings for better readability',
+                    reference: 'Content readability best practices',
+                    location: `Only ${headings.length} heading tags found on page`
+                });
+            }
+        }
+
+        function analyzeLinks(doc, improvements) {
+            const externalLinks = doc.querySelectorAll('a[href^="http"]:not([href*="' + siteAnalysisData.domain + '"])');
+            const linksWithoutText = doc.querySelectorAll('a:empty, a[aria-label=""], a[title=""]');
+            
+            let externalLinksWithoutTarget = 0;
+            externalLinks.forEach(link => {
+                if (!link.hasAttribute('target') || link.getAttribute('target') !== '_blank') {
+                    externalLinksWithoutTarget++;
+                }
+            });
+
+            if (externalLinksWithoutTarget > 0) {
+                improvements.ux.push({
+                    text: `${externalLinksWithoutTarget} external link(s) should open in new tab`,
+                    reference: 'User experience best practices',
+                    location: `${externalLinksWithoutTarget} external links without target="_blank"`
+                });
+            }
+
+            if (linksWithoutText.length > 0) {
+                improvements.accessibility.push({
+                    text: `${linksWithoutText.length} link(s) missing descriptive text`,
+                    reference: 'WCAG 2.1 link accessibility',
+                    location: `${linksWithoutText.length} empty or unlabeled link tags`
+                });
+            }
+        }
+
+        function analyzeForms(doc, improvements) {
+            const forms = doc.querySelectorAll('form');
+            const inputsWithoutLabels = doc.querySelectorAll('input:not([type="hidden"]):not([aria-label]):not([id])');
+            
+            if (forms.length > 0 && inputsWithoutLabels.length > 0) {
+                improvements.accessibility.push({
+                    text: `${inputsWithoutLabels.length} form input(s) missing proper labels`,
+                    reference: 'WCAG 2.1 form accessibility',
+                    location: `${inputsWithoutLabels.length} input elements without labels or IDs`
+                });
+            }
+        }
+
         function analyzeUrlStructure(url, improvements) {
             const urlObj = new URL(url);
             
-            // Check if it's a WordPress.com site
-            if (urlObj.hostname.includes('wordpress.com')) {
-                improvements.wordpress.push('Confirmed WordPress.com site - perfect for our recommendations!');
+            if (siteAnalysisData.isWordPressCom) {
+                improvements.wordpress.push({
+                    text: 'Confirmed WordPress.com site - perfect for our recommendations!',
+                    reference: 'WordPress.com platform identification',
+                    location: `Domain: ${urlObj.hostname}`
+                });
             }
             
-            // Check URL structure
-            if (url.length > 60) {
-                improvements.seo.push('URL is quite long - consider shortening for better SEO');
+            if (siteAnalysisData.urlLength > 60) {
+                improvements.seo.push({
+                    text: 'URL is quite long - consider shortening for better SEO',
+                    reference: 'Google URL structure guidelines',
+                    location: `Current URL length: ${siteAnalysisData.urlLength} characters`
+                });
             }
             
             if (urlObj.pathname.includes('_') || urlObj.pathname.includes('%20')) {
-                improvements.seo.push('URL contains underscores or spaces - use hyphens instead');
+                improvements.seo.push({
+                    text: 'URL contains underscores or spaces - use hyphens instead',
+                    reference: 'Google URL structure guidelines',
+                    location: `URL path: ${urlObj.pathname}`
+                });
             }
             
-            if (!urlObj.protocol.includes('https')) {
-                improvements.seo.push('Site should use HTTPS for security and SEO benefits');
+            if (!siteAnalysisData.hasHTTPS) {
+                improvements.seo.push({
+                    text: 'Site should use HTTPS for security and SEO benefits',
+                    reference: 'Google security requirements',
+                    location: `Current protocol: ${urlObj.protocol}`
+                });
             }
         }
 
         function addWordPressRecommendations(url, improvements) {
             const wpRecommendations = [
-                { text: 'Consider upgrading to WordPress.com Business plan for advanced customization options', source: 'WordPress.com pricing page analysis' },
-                { text: 'Review and update WordPress themes regularly for security and performance', source: 'WordPress security best practices' },
-                { text: 'Optimize images using WordPress.com\'s built-in image optimization', source: 'WordPress.com feature documentation' },
-                { text: 'Set up Jetpack features for better performance and security', source: 'Jetpack plugin recommendations' },
-                { text: 'Consider using WordPress.com\'s CDN for faster global loading', source: 'WordPress.com performance tools' },
-                { text: 'Review plugin usage - remove unnecessary plugins to improve performance', source: 'WordPress performance optimization guide' },
-                { text: 'Set up automated backups through WordPress.com', source: 'WordPress.com backup feature' },
-                { text: 'Configure proper caching settings for better speed', source: 'WordPress caching best practices' },
-                { text: 'Use WordPress.com\'s built-in SEO tools and meta descriptions', source: 'WordPress.com SEO features' }
+                { text: 'Consider upgrading to WordPress.com Business plan for advanced customization', reference: 'WordPress.com pricing comparison', location: 'WordPress.com admin → Plans & Pricing' },
+                { text: 'Review and update WordPress themes regularly for security', reference: 'WordPress security best practices', location: 'WordPress.com admin → Appearance → Themes' },
+                { text: 'Optimize images using WordPress.com\'s built-in tools', reference: 'WordPress.com feature documentation', location: 'Media Library → Image optimization settings' },
+                { text: 'Set up Jetpack features for better performance and security', reference: 'Jetpack plugin recommendations', location: 'WordPress.com admin → Jetpack settings' },
+                { text: 'Use WordPress.com\'s CDN for faster global loading', reference: 'WordPress.com performance tools', location: 'WordPress.com admin → Settings → Performance' },
+                { text: 'Review plugin usage - remove unnecessary plugins', reference: 'WordPress performance optimization guide', location: 'WordPress.com admin → Plugins → Installed Plugins' },
+                { text: 'Set up automated backups through WordPress.com', reference: 'WordPress.com backup feature', location: 'WordPress.com admin → Tools → Export/Backup' },
+                { text: 'Configure proper caching settings for better speed', reference: 'WordPress caching best practices', location: 'WordPress.com admin → Settings → Performance' }
             ];
 
-            // Add 3-5 random recommendations
             const shuffled = wpRecommendations.sort(() => 0.5 - Math.random());
             improvements.wordpress.push(...shuffled.slice(0, Math.floor(Math.random() * 3) + 3));
         }
 
         function addSEORecommendations(url, improvements) {
             const seoRecommendations = [
-                { text: 'Add meta descriptions to all pages (aim for 150-160 characters)', source: 'Google SEO best practices' },
-                { text: 'Ensure each page has a unique, descriptive title tag', source: 'Google Search Console guidelines' },
-                { text: 'Add alt text to all images for better accessibility and SEO', source: 'WCAG 2.1 accessibility standards' },
-                { text: 'Create an XML sitemap and submit to Google Search Console', source: 'Google Search Console documentation' },
-                { text: 'Improve internal linking between related pages', source: 'SEO internal linking best practices' },
-                { text: 'Add schema markup for better search engine understanding', source: 'Google structured data guidelines' },
-                { text: 'Optimize page loading speed for better search rankings', source: 'Google Core Web Vitals' },
-                { text: 'Create compelling meta titles (50-60 characters)', source: 'Google SERP optimization guide' },
-                { text: 'Add Open Graph tags for better social media sharing', source: 'Facebook Open Graph documentation' },
-                { text: 'Consider adding breadcrumb navigation', source: 'Google structured data guidelines' }
+                { text: 'Create an XML sitemap and submit to Google Search Console', reference: 'Google Search Console guidelines', location: 'WordPress.com admin → Traffic → Site Verification' },
+                { text: 'Improve internal linking between related pages', reference: 'SEO internal linking best practices', location: 'Content editor → Link insertion tool' },
+                { text: 'Add schema markup for better search engine understanding', reference: 'Google structured data guidelines', location: 'WordPress.com admin → Settings → SEO' },
+                { text: 'Add Open Graph tags for better social media sharing', reference: 'Facebook Open Graph documentation', location: 'WordPress.com admin → Sharing → Social Media' },
+                { text: 'Consider adding breadcrumb navigation', reference: 'Google structured data guidelines', location: 'WordPress.com admin → Appearance → Customize → Widgets' }
             ];
 
             const shuffled = seoRecommendations.sort(() => 0.5 - Math.random());
-            improvements.seo.push(...shuffled.slice(0, Math.floor(Math.random() * 4) + 4));
+            improvements.seo.push(...shuffled.slice(0, Math.floor(Math.random() * 2) + 2));
         }
 
         function addPerformanceRecommendations(url, improvements) {
             const perfRecommendations = [
-                { text: 'Optimize images by compressing and using modern formats (WebP)', source: 'Google PageSpeed Insights' },
-                { text: 'Minimize HTTP requests by combining CSS and JavaScript files', source: 'Web performance optimization standards' },
-                { text: 'Enable browser caching for static resources', source: 'Google PageSpeed Insights' },
-                { text: 'Consider implementing lazy loading for images below the fold', source: 'Google Core Web Vitals guide' },
-                { text: 'Minify CSS and JavaScript files', source: 'Web performance best practices' },
-                { text: 'Use a Content Delivery Network (CDN) for faster global access', source: 'Performance optimization guidelines' },
-                { text: 'Optimize database queries and remove unused plugins', source: 'WordPress performance optimization' },
-                { text: 'Compress text files using Gzip', source: 'HTTP compression standards' },
-                { text: 'Remove unused CSS and JavaScript code', source: 'Google Lighthouse recommendations' },
-                { text: 'Optimize font loading and reduce font variations', source: 'Google Fonts optimization guide' }
+                { text: 'Enable browser caching for static resources', reference: 'Google PageSpeed Insights', location: 'WordPress.com admin → Settings → Performance → Caching' },
+                { text: 'Consider implementing lazy loading for images', reference: 'Google Core Web Vitals guide', location: 'WordPress.com admin → Settings → Media → Image loading' },
+                { text: 'Minify CSS and JavaScript files', reference: 'Web performance best practices', location: 'WordPress.com admin → Settings → Performance → Minification' },
+                { text: 'Optimize database queries and remove unused plugins', reference: 'WordPress performance optimization', location: 'WordPress.com admin → Plugins → Installed Plugins' },
+                { text: 'Optimize font loading and reduce font variations', reference: 'Google Fonts optimization guide', location: 'WordPress.com admin → Appearance → Customize → Fonts' }
             ];
 
             const shuffled = perfRecommendations.sort(() => 0.5 - Math.random());
-            improvements.performance.push(...shuffled.slice(0, Math.floor(Math.random() * 3) + 3));
+            improvements.performance.push(...shuffled.slice(0, Math.floor(Math.random() * 2) + 2));
         }
 
         function addUXRecommendations(url, improvements) {
             const uxRecommendations = [
-                { text: 'Make contact information easily accessible in header or footer', source: 'UX design best practices' },
-                { text: 'Add a clear call-to-action button above the fold', source: 'Conversion optimization guidelines' },
-                { text: 'Simplify navigation menu - limit to 7 main items', source: 'Miller\'s Rule (cognitive psychology)' },
-                { text: 'Add a search function to help users find content', source: 'Website usability standards' },
-                { text: 'Improve mobile responsiveness and touch-friendly buttons', source: 'Google Mobile-First indexing' },
-                { text: 'Add breadcrumb navigation for better user orientation', source: 'Website navigation best practices' },
-                { text: 'Include customer testimonials or social proof', source: 'Conversion optimization research' },
-                { text: 'Create a clear value proposition on the homepage', source: 'Landing page optimization guide' },
-                { text: 'Add a "Back to Top" button for long pages', source: 'Web usability guidelines' },
-                { text: 'Implement error pages (404) with helpful navigation', source: 'HTTP status code best practices' }
-            ];
-
-            const shuffled = uxRecommendations.sort(() => 0.5 - Math.random());
-            improvements.ux.push(...shuffled.slice(0, Math.floor(Math.random() * 3) + 4));
-        }
-
-        function addAccessibilityRecommendations(url, improvements) {
-            const a11yRecommendations = [
-                { text: 'Improve color contrast ratios to meet WCAG 2.1 standards', source: 'WCAG 2.1 AA compliance guidelines' },
-                { text: 'Add focus indicators for keyboard navigation', source: 'WCAG 2.1 keyboard accessibility' },
-                { text: 'Include skip navigation links for screen readers', source: 'WCAG 2.1 navigation guidelines' },
-                { text: 'Ensure all buttons and links have descriptive labels', source: 'WCAG 2.1 labeling requirements' },
-                { text: 'Add captions or transcripts for video content', source: 'WCAG 2.1 multimedia guidelines' },
-                { text: 'Use proper heading hierarchy (H1, H2, H3)', source: 'WCAG 2.1 content structure' },
-                { text: 'Increase font size for better readability (minimum 16px)', source: 'Web accessibility guidelines' },
-                { text: 'Provide alternative text for decorative images', source: 'WCAG 2.1 image accessibility' },
-                { text: 'Ensure forms have proper labels and error messages', source: 'WCAG 2.1 form accessibility' },
-                { text: 'Test with screen readers and keyboard-only navigation', source: 'Accessibility testing best practices' }
-            ];
-
-            const shuffled = a11yRecommendations.sort(() => 0.5 - Math.random());
-            improvements.accessibility.push(...shuffled.slice(0, Math.floor(Math.random() * 2) + 3));
-        }
-
-        function addContentRecommendations(url, improvements) {
-            const contentRecommendations = [
-                { text: 'Break up long paragraphs into shorter, scannable sections', source: 'Content readability best practices' },
-                { text: 'Add more subheadings to improve content structure', source: 'SEO content optimization guide' },
-                { text: 'Include bullet points and numbered lists for easy reading', source: 'Web writing guidelines' },
-                { text: 'Add relevant images to break up text-heavy content', source: 'Content engagement best practices' },
-                { text: 'Create a clear content hierarchy with proper headings', source: 'Information architecture principles' },
-                { text: 'Write compelling page titles and meta descriptions', source: 'Content marketing guidelines' },
-                { text: 'Add author bios and publication dates for credibility', source: 'Content trust and authority signals' },
-                { text: 'Include related posts or content suggestions', source: 'User engagement optimization' },
-                { text: 'Create a consistent tone and voice throughout the site', source: 'Brand content strategy guidelines' },
-                { text: 'Add calls-to-action within content to guide users', source: 'Conversion optimization best practices' }
-            ];
-
-            const shuffled = contentRecommendations.sort(() => 0.5 - Math.random());
-            improvements.content.push(...shuffled.slice(0, Math.floor(Math.random() * 2) + 3));
-        }
-
-        function compileResults(improvements) {
-            const results = [];
-
-            if (improvements.seo.length > 0) {
-                results.push({
-                    category: 'SEO Optimization',
-                    icon: '🔍',
-                    priority: 'high',
-                    items: improvements.seo
-                });
-            }
-
-            if (improvements.wordpress.length > 0) {
-                results.push({
-                    category: 'WordPress.com Specific',
-                    icon: '⚡',
-                    priority: 'high',
-                    items: improvements.wordpress
-                });
-            }
-
-            if (improvements.performance.length > 0) {
-                results.push({
-                    category: 'Performance',
-                    icon: '🚀',
-                    priority: 'medium',
-                    items: improvements.performance
-                });
-            }
-
-            if (improvements.ux.length > 0) {
-                results.push({
-                    category: 'User Experience',
-                    icon: '👤',
-                    priority: 'medium',
-                    items: improvements.ux
-                });
-            }
-
-            if (improvements.content.length > 0) {
-                results.push({
-                    category: 'Content & Structure',
-                    icon: '✍️',
-                    priority: 'medium',
-                    items: improvements.content
-                });
-            }
-
-            if (improvements.accessibility.length > 0) {
-                results.push({
-                    category: 'Accessibility',
-                    icon: '♿',
-                    priority: 'low',
-                    items: improvements.accessibility
-                });
-            }
-
-            return results;
-        }
-
-        function displayResults() {
-            const grid = document.getElementById('improvementGrid');
-            grid.innerHTML = '';
-
-            analysisResults.improvements.forEach(category => {
-                const card = document.createElement('div');
-                card.className = `improvement-card priority-${category.priority}`;
-                
-                const priorityText = category.priority.charAt(0).toUpperCase() + category.priority.slice(1);
-                
-                const itemsHtml = category.items.map(item => {
-                    if (typeof item === 'object') {
-                        return `<li>
-                            <div class="recommendation-text">${item.text}</div>
-                            <div class="recommendation-source">Source: ${item.source}</div>
-                        </li>`;
-                    } else {
-                        return `<li><div class="recommendation-text">${item}</div></li>`;
-                    }
-                }).join('');
-                
-                card.innerHTML = `
-                    <h3>
-                        <span class="icon">${category.icon}</span>
-                        ${category.category}
-                        <span class="priority-badge">${priorityText}</span>
-                    </h3>
-                    <ul class="improvement-list">
-                        ${itemsHtml}
-                    </ul>
-                `;
-                
-                grid.appendChild(card);
-            });
-        }
-
-        function exportResults() {
-            let report = `WordPress.com Website Analysis Report\n${'='.repeat(40)}\n\n`;
-            report += `URL: ${analysisResults.url}\n`;
-            report += `Analysis Date: ${new Date().toLocaleDateString()}\n`;
-            report += `Analyzed by: WordPress.com Team Kirin\n\n`;
-
-            report += `EXECUTIVE SUMMARY\n${'-'.repeat(20)}\n`;
-            report += `This analysis provides actionable recommendations to improve your website's\n`;
-            report += `performance, SEO, user experience, and WordPress.com optimization.\n\n`;
-
-            analysisResults.improvements.forEach(category => {
-                report += `${category.category.toUpperCase()} (${category.priority.toUpperCase()} PRIORITY)\n`;
-                report += `${'-'.repeat(category.category.length + 20)}\n`;
-                category.items.forEach((item, index) => {
-                    report += `${index + 1}. ${item}\n`;
-                });
-                report += '\n';
-            });
-
-            report += `NEXT STEPS\n${'-'.repeat(15)}\n`;
-            report += `1. Start with HIGH priority items for immediate impact\n`;
-            report += `2. WordPress.com customers can implement these through their admin panel\n`;
-            report += `3. Contact WordPress.com support for technical assistance\n`;
-            report += `4. Re-analyze after changes to track improvements\n\n`;
-
-            report += `Generated by WordPress.com Website Improvement Analyzer\n`;
-            report += `Team Kirin - WordPress.com Happiness Team\n`;
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(report).then(() => {
-                alert('Report copied to clipboard! You can now paste it into an email or document to share with your customer.');
-            }).catch(() => {
-                // Fallback: create a downloadable text file
-                const blob = new Blob([report], { type: 'text/plain' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `wordpress-analysis-${new Date().toISOString().split('T')[0]}.txt`;
-                a.click();
-                window.URL.revokeObjectURL(url);
-                alert('Report downloaded as a text file!');
-            });
-        }
-
-        function showError(message) {
-            const inputSection = document.querySelector('.input-section');
-            const existingError = inputSection.querySelector('.error');
-            if (existingError) {
-                existingError.remove();
-            }
-
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error';
-            errorDiv.textContent = message;
-            inputSection.appendChild(errorDiv);
-
-            setTimeout(() => {
-                errorDiv.remove();
-            }, 5000);
-        }
-
-        // Allow Enter key to trigger analysis
-        document.getElementById('urlInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                analyzeWebsite();
-            }
-        });
-    </script>
-</body>
-</html>
+                { text: 'Make contact information easily accessible in header or footer', reference: 'UX design best practices', location: 'WordPress.com admin → Appearance → Customize → Header/Footer' },
+                { text: 'Add a clear call-to-action button above the fold', reference: 'Conversion optimization guidelines', location: 'Homepage content editor → Button blocks' },
+                { text: 'Simplify navigation menu - limit to 7 main items', reference: 'Miller\'s Rule (cognitive psychology)', location: 'WordPress.com admin → Appearance → Customize → Menus' },
+                { text: 'Add a search function to help users find content', reference: 'Website usability standards', location: 'WordPress.com admin →
