@@ -379,58 +379,52 @@
         }
 
         async function performRealAnalysis(url) {
-            const improvements = {
-                seo: [],
-                performance: [],
-                wordpress: [],
-                ux: [],
-                accessibility: [],
-                content: []
-            };
-
-            // Simulate network delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // Try to fetch and analyze the page (will work for same-origin or CORS-enabled sites)
-            let doc = null;
-            let pageContent = '';
-            
             try {
-                // For demo purposes, we'll create analysis based on URL patterns and common issues
-                // In production, you'd want to use a proxy service or server-side analysis
-                
-                // URL-based analysis
-                analyzeUrlStructure(url, improvements);
-                
-                // Common WordPress.com recommendations
-                addWordPressRecommendations(url, improvements);
-                
-                // Performance recommendations
-                addPerformanceRecommendations(url, improvements);
-                
-                // SEO basics
-                addSEORecommendations(url, improvements);
-                
-                // UX recommendations
-                addUXRecommendations(url, improvements);
-                
-                // Accessibility recommendations
-                addAccessibilityRecommendations(url, improvements);
+                // Call the real backend API
+                const response = await fetch('https://website-analyzer-4f8s.vercel.app/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url })
+                });
 
-                // Content recommendations
-                addContentRecommendations(url, improvements);
+                if (!response.ok) {
+                    throw new Error(`Analysis failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Store the real results
+                analysisResults = data;
+                
+                displayResults();
                 
             } catch (error) {
-                console.log('CORS restriction - using URL-based analysis only');
+                console.error('Analysis error:', error);
+                
+                // Fallback to basic analysis if API fails
+                showError('Unable to connect to analysis server. Showing basic recommendations.');
+                
+                // Provide basic fallback analysis
+                const fallbackResults = {
+                    url: url,
+                    improvements: [
+                        {
+                            category: 'Connection Issue',
+                            icon: '⚠️',
+                            priority: 'high',
+                            items: [
+                                { text: 'Unable to analyze site - check if URL is correct and accessible', source: 'Connection error' },
+                                { text: 'Consider WordPress.com hosting for reliable uptime', source: 'WordPress.com benefits' }
+                            ]
+                        }
+                    ]
+                };
+                
+                analysisResults = fallbackResults;
+                displayResults();
             }
-
-            // Compile results
-            analysisResults = {
-                url: url,
-                improvements: compileResults(improvements)
-            };
-
-            displayResults();
         }
 
         function analyzeUrlStructure(url, improvements) {
