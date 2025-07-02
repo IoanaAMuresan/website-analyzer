@@ -380,8 +380,8 @@
 
         async function performRealAnalysis(url) {
             try {
-                // Call the real backend API
-                const response = await fetch('https://website-analyzer-4f8s.vercel.app/api/analyze', {
+                // Call the test API first
+                const response = await fetch('https://website-analyzer-4f8s.vercel.app/api/test', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
