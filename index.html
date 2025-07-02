@@ -44,10 +44,11 @@
         }
 
         .kirin-logo {
-            width: 80px;
-            height: 80px;
-            background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9IjUwMCIgdmlld0JveD0iMCAwIDUwMCA1MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0yNTAgNTBMMzAwIDEwMEwyNTAgMTUwTDIwMCAxMDBMMjUwIDUwWiIgc3Ryb2tlPSIjRkY2QjZCIiBzdHJva2Utd2lkdGg9IjgiIGZpbGw9Im5vbmUiLz4KPGF1Y2lyY2xlIGN4PSIxNzAiIGN5PSIyMDAiIHI9IjMwIiBzdHJva2U9IiNGRjZCNkIiIHN0cm9rZS13aWR0aD0iOCIgZmlsbD0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIxNzAiIGN5PSIyMDAiIHI9IjE1IiBzdHJva2U9IiNGRjZCNkIiIHN0cm9rZS13aWR0aD0iNCIgZmlsbD0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIzMzAiIGN5PSIyMDAiIHI9IjMwIiBzdHJva2U9IiNGRjZCNkIiIHN0cm9rZS13aWR0aD0iOCIgZmlsbD0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIzMzAiIGN5PSIyMDAiIHI9IjE1IiBzdHJva2U9IiNGRjZCNkIiIHN0cm9rZS13aWR0aD0iNCIgZmlsbD0ibm9uZSIvPgo8cGF0aCBkPSJNMTAwIDEwMEM5MCAyNTAgNDEwIDI1MCA0MDAgMTAwIiBzdHJva2U9IiNGRkQ5M0QiIHN0cm9rZS13aWR0aD0iMTAiIGZpbGw9Im5vbmUiLz4KPHN2ZyBjbGFzcz0ibG9nby1pbWFnZSI+CjxyZWN0IHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIiBmaWxsPSJ0cmFuc3BhcmVudCIvPgo8L3N2Zz4KPC9zdmc+') center/contain no-repeat;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+            width: 100px;
+            height: 100px;
+            background: url('https://raw.githubusercontent.com/IoanaAMuresan/website-analyzer/main/Kirin%20logo.png') center/contain no-repeat;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+            flex-shrink: 0;
         }
 
         .header h1 {
@@ -160,6 +161,31 @@
             word-break: break-all;
         }
 
+        .analysis-summary {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            color: #475569;
+            line-height: 1.6;
+        }
+
+        .analysis-summary h3 {
+            color: #1e293b;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .analysis-summary a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .analysis-summary a:hover {
+            text-decoration: underline;
+        }
+
         .improvement-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -224,6 +250,17 @@
             font-style: italic;
         }
 
+        .source-location {
+            font-size: 0.8rem;
+            color: #059669;
+            background: #f0fdf4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
         .priority-high { border-left-color: #ef4444; }
         .priority-medium { border-left-color: #f59e0b; }
         .priority-low { border-left-color: #10b981; }
@@ -286,8 +323,6 @@
             border-radius: 8px;
             margin: 20px 0;
         }
-
-
     </style>
 </head>
 <body>
@@ -325,6 +360,10 @@
                 <div class="analyzed-url" id="analyzedUrl"></div>
             </div>
 
+            <div class="analysis-summary" id="analysisSummary">
+                <!-- Summary will be populated here -->
+            </div>
+
             <div class="improvement-grid" id="improvementGrid">
                 <!-- Results will be populated here -->
             </div>
@@ -340,6 +379,24 @@
 
     <script>
         let analysisResults = {};
+        let siteAnalysisData = {};
+
+        // WordPress.com support documentation links
+        const wpcomSupportLinks = {
+            seo: 'https://wordpress.com/support/seo/',
+            performance: 'https://wordpress.com/support/site-speed/',
+            themes: 'https://wordpress.com/support/themes/',
+            plugins: 'https://wordpress.com/support/plugins/',
+            media: 'https://wordpress.com/support/media/',
+            jetpack: 'https://wordpress.com/support/jetpack/',
+            plans: 'https://wordpress.com/support/plans/',
+            domains: 'https://wordpress.com/support/domains/',
+            security: 'https://wordpress.com/support/security/',
+            analytics: 'https://wordpress.com/support/google-analytics/',
+            accessibility: 'https://wordpress.com/support/accessibility/',
+            mobile: 'https://wordpress.com/support/mobile-theme/',
+            customization: 'https://wordpress.com/support/customization/'
+        };
 
         async function analyzeWebsite() {
             const urlInput = document.getElementById('urlInput');
@@ -370,7 +427,6 @@
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
                 showError('Analysis completed with limited data. Some checks may require direct site access.');
-                // Still show results even if there were errors
                 document.getElementById('results').classList.add('show');
                 document.getElementById('analyzedUrl').textContent = targetUrl;
             } finally {
@@ -379,160 +435,407 @@
         }
 
         async function performRealAnalysis(url) {
+            const improvements = {
+                seo: [],
+                performance: [],
+                wordpress: [],
+                ux: [],
+                accessibility: [],
+                content: [],
+                technical: [],
+                mobile: [],
+                security: [],
+                analytics: []
+            };
+
+            // Initialize site analysis data
+            siteAnalysisData = {
+                url: url,
+                hasHTTPS: url.startsWith('https://'),
+                urlLength: url.length,
+                domain: new URL(url).hostname,
+                isWordPressCom: new URL(url).hostname.includes('wordpress.com'),
+                pageData: null
+            };
+
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Try to fetch and analyze the actual page
             try {
-                // Call the real backend API
-                const response = await fetch('https://website-analyzer-4f8s.vercel.app/api/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ url: url })
-                });
+                await fetchAndAnalyzePage(url, improvements);
+            } catch (error) {
+                console.log('Cannot fetch page directly - using URL-based analysis');
+                // Fallback to URL-based analysis
+                analyzeUrlStructure(url, improvements);
+            }
 
-                if (!response.ok) {
-                    throw new Error(`Analysis failed: ${response.status}`);
-                }
+            // Add comprehensive recommendations
+            addWordPressRecommendations(url, improvements);
+            addPerformanceRecommendations(url, improvements);
+            addSEORecommendations(url, improvements);
+            addUXRecommendations(url, improvements);
+            addAccessibilityRecommendations(url, improvements);
+            addContentRecommendations(url, improvements);
+            addTechnicalRecommendations(url, improvements);
+            addMobileRecommendations(url, improvements);
+            addSecurityRecommendations(url, improvements);
+            addAnalyticsRecommendations(url, improvements);
 
-                const data = await response.json();
+            // Compile results
+            analysisResults = {
+                url: url,
+                improvements: compileResults(improvements)
+            };
+
+            displayResults();
+        }
+
+        async function fetchAndAnalyzePage(url, improvements) {
+            try {
+                // Note: This will only work for same-origin or CORS-enabled sites
+                // For production, you'd want to use a proxy service
+                const response = await fetch(url, { mode: 'cors' });
+                const html = await response.text();
                 
-                // Store the real results
-                analysisResults = data;
-                
-                displayResults();
+                // Parse HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                siteAnalysisData.pageData = doc;
+
+                // Analyze specific elements
+                analyzeTitleTags(doc, improvements);
+                analyzeMetaDescriptions(doc, improvements);
+                analyzeImages(doc, improvements);
+                analyzeHeadings(doc, improvements);
+                analyzeLinks(doc, improvements);
+                analyzeForms(doc, improvements);
+                analyzeCanonicalTags(doc, improvements);
+                analyzeMetaTags(doc, improvements);
+                analyzeContentQuality(doc, improvements);
+                analyzeMobileOptimization(doc, improvements);
+                analyzeStructuredData(doc, improvements);
+                analyzeInternalLinking(doc, improvements);
                 
             } catch (error) {
-                console.error('Analysis error:', error);
-                
-                // Fallback to basic analysis if API fails
-                showError('Unable to connect to analysis server. Showing basic recommendations.');
-                
-                // Provide basic fallback analysis
-                const fallbackResults = {
-                    url: url,
-                    improvements: [
-                        {
-                            category: 'Connection Issue',
-                            icon: '⚠️',
-                            priority: 'high',
-                            items: [
-                                { text: 'Unable to analyze site - check if URL is correct and accessible', source: 'Connection error' },
-                                { text: 'Consider WordPress.com hosting for reliable uptime', source: 'WordPress.com benefits' }
-                            ]
-                        }
-                    ]
-                };
-                
-                analysisResults = fallbackResults;
-                displayResults();
+                // If we can't fetch the page, fall back to URL analysis
+                analyzeUrlStructure(url, improvements);
+                throw error;
             }
         }
 
-        function displayResults() {
-            const grid = document.getElementById('improvementGrid');
-            grid.innerHTML = '';
-
-            analysisResults.improvements.forEach(category => {
-                const card = document.createElement('div');
-                card.className = `improvement-card priority-${category.priority}`;
-                
-                const priorityText = category.priority.charAt(0).toUpperCase() + category.priority.slice(1);
-                
-                const itemsHtml = category.items.map(item => {
-                    if (typeof item === 'object') {
-                        return `<li>
-                            <div class="recommendation-text">${item.text}</div>
-                            <div class="recommendation-source">Source: ${item.source}</div>
-                        </li>`;
-                    } else {
-                        return `<li><div class="recommendation-text">${item}</div></li>`;
-                    }
-                }).join('');
-                
-                card.innerHTML = `
-                    <h3>
-                        <span class="icon">${category.icon}</span>
-                        ${category.category}
-                        <span class="priority-badge">${priorityText}</span>
-                    </h3>
-                    <ul class="improvement-list">
-                        ${itemsHtml}
-                    </ul>
-                `;
-                
-                grid.appendChild(card);
-            });
-        }
-
-        function exportResults() {
-            let report = `WordPress.com Website Analysis Report\n${'='.repeat(40)}\n\n`;
-            report += `URL: ${analysisResults.url}\n`;
-            report += `Analysis Date: ${new Date().toLocaleDateString()}\n`;
-            report += `Analyzed by: WordPress.com Team Kirin\n\n`;
-
-            report += `EXECUTIVE SUMMARY\n${'-'.repeat(20)}\n`;
-            report += `This analysis provides actionable recommendations to improve your website's\n`;
-            report += `performance, SEO, user experience, and WordPress.com optimization.\n\n`;
-
-            analysisResults.improvements.forEach(category => {
-                report += `${category.category.toUpperCase()} (${category.priority.toUpperCase()} PRIORITY)\n`;
-                report += `${'-'.repeat(category.category.length + 20)}\n`;
-                category.items.forEach((item, index) => {
-                    const text = typeof item === 'object' ? item.text : item;
-                    const source = typeof item === 'object' ? item.source : '';
-                    report += `${index + 1}. ${text}\n`;
-                    if (source) report += `   Source: ${source}\n`;
+        function analyzeTitleTags(doc, improvements) {
+            const titleElement = doc.querySelector('title');
+            if (!titleElement) {
+                improvements.seo.push({
+                    text: 'Missing page title - add a descriptive title tag',
+                    reference: 'WordPress SEO best practices',
+                    location: '<head> section - no <title> tag found'
                 });
-                report += '\n';
-            });
-
-            report += `NEXT STEPS\n${'-'.repeat(15)}\n`;
-            report += `1. Start with HIGH priority items for immediate impact\n`;
-            report += `2. WordPress.com customers can implement these through their admin panel\n`;
-            report += `3. Contact WordPress.com support for technical assistance\n`;
-            report += `4. Re-analyze after changes to track improvements\n\n`;
-
-            report += `Generated by WordPress.com Website Improvement Analyzer\n`;
-            report += `Team Kirin - WordPress.com Happiness Team\n`;
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(report).then(() => {
-                alert('Report copied to clipboard! You can now paste it into an email or document to share with your customer.');
-            }).catch(() => {
-                // Fallback: create a downloadable text file
-                const blob = new Blob([report], { type: 'text/plain' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `wordpress-analysis-${new Date().toISOString().split('T')[0]}.txt`;
-                a.click();
-                window.URL.revokeObjectURL(url);
-                alert('Report downloaded as a text file!');
-            });
+            } else {
+                const titleText = titleElement.textContent.trim();
+                if (titleText.length === 0) {
+                    improvements.seo.push({
+                        text: 'Empty page title - add descriptive content to title tag',
+                        reference: 'WordPress SEO best practices',
+                        location: '<title> tag in <head> section'
+                    });
+                } else if (titleText.length > 60) {
+                    improvements.seo.push({
+                        text: 'Page title is too long (over 60 characters) - consider shortening',
+                        reference: 'Google SERP optimization guide',
+                        location: `<title> tag: "${titleText.substring(0, 50)}..."`
+                    });
+                }
+            }
         }
 
-        function showError(message) {
-            const inputSection = document.querySelector('.input-section');
-            const existingError = inputSection.querySelector('.error');
-            if (existingError) {
-                existingError.remove();
+        function analyzeMetaDescriptions(doc, improvements) {
+            const metaDesc = doc.querySelector('meta[name="description"]');
+            if (!metaDesc) {
+                improvements.seo.push({
+                    text: 'Missing meta description - add one for better search results',
+                    reference: 'Google SEO best practices',
+                    location: '<head> section - no meta description found'
+                });
+            } else {
+                const content = metaDesc.getAttribute('content') || '';
+                if (content.length === 0) {
+                    improvements.seo.push({
+                        text: 'Empty meta description - add descriptive content',
+                        reference: 'Google SEO best practices',
+                        location: '<meta name="description"> tag in <head>'
+                    });
+                } else if (content.length > 160) {
+                    improvements.seo.push({
+                        text: 'Meta description is too long (over 160 characters)',
+                        reference: 'Google SERP optimization guide',
+                        location: `Meta description: "${content.substring(0, 50)}..."`
+                    });
+                }
             }
-
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error';
-            errorDiv.textContent = message;
-            inputSection.appendChild(errorDiv);
-
-            setTimeout(() => {
-                errorDiv.remove();
-            }, 5000);
         }
 
-        // Allow Enter key to trigger analysis
-        document.getElementById('urlInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                analyzeWebsite();
+        function analyzeImages(doc, improvements) {
+            const images = doc.querySelectorAll('img');
+            let imagesWithoutAlt = 0;
+            let largeImages = 0;
+            
+            images.forEach((img, index) => {
+                if (!img.hasAttribute('alt') || img.getAttribute('alt').trim() === '') {
+                    imagesWithoutAlt++;
+                }
+                
+                // Check for potentially large images (basic heuristic)
+                const src = img.getAttribute('src');
+                if (src && (src.includes('full') || src.includes('large') || !src.includes('thumbnail'))) {
+                    largeImages++;
+                }
+            });
+
+            if (imagesWithoutAlt > 0) {
+                improvements.accessibility.push({
+                    text: `${imagesWithoutAlt} image(s) missing alt text for screen readers`,
+                    reference: 'WCAG 2.1 accessibility standards',
+                    location: `Found ${imagesWithoutAlt} img tags without alt attributes`
+                });
             }
-        });
-    </script>
-</body>
-</html>
+
+            if (largeImages > 3) {
+                improvements.performance.push({
+                    text: 'Multiple large images detected - consider optimization',
+                    reference: 'Google PageSpeed Insights',
+                    location: `${largeImages} potentially large images found on page`
+                });
+            }
+        }
+
+        function analyzeHeadings(doc, improvements) {
+            const h1Tags = doc.querySelectorAll('h1');
+            const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
+            
+            if (h1Tags.length === 0) {
+                improvements.seo.push({
+                    text: 'No H1 heading found - add a main heading for better SEO',
+                    reference: 'SEO content structure guidelines',
+                    location: 'Page body - no <h1> tag detected'
+                });
+            } else if (h1Tags.length > 1) {
+                improvements.seo.push({
+                    text: 'Multiple H1 headings found - use only one H1 per page',
+                    reference: 'SEO content structure guidelines',
+                    location: `${h1Tags.length} <h1> tags found on page`
+                });
+            }
+
+            if (headings.length < 3) {
+                improvements.content.push({
+                    text: 'Limited heading structure - add more subheadings for better readability',
+                    reference: 'Content readability best practices',
+                    location: `Only ${headings.length} heading tags found on page`
+                });
+            }
+        }
+
+        function analyzeLinks(doc, improvements) {
+            const externalLinks = doc.querySelectorAll('a[href^="http"]:not([href*="' + siteAnalysisData.domain + '"])');
+            const linksWithoutText = doc.querySelectorAll('a:empty, a[aria-label=""], a[title=""]');
+            
+            let externalLinksWithoutTarget = 0;
+            externalLinks.forEach(link => {
+                if (!link.hasAttribute('target') || link.getAttribute('target') !== '_blank') {
+                    externalLinksWithoutTarget++;
+                }
+            });
+
+            if (externalLinksWithoutTarget > 0) {
+                improvements.ux.push({
+                    text: `${externalLinksWithoutTarget} external link(s) should open in new tab`,
+                    reference: 'User experience best practices',
+                    location: `${externalLinksWithoutTarget} external links without target="_blank"`
+                });
+            }
+
+            if (linksWithoutText.length > 0) {
+                improvements.accessibility.push({
+                    text: `${linksWithoutText.length} link(s) missing descriptive text`,
+                    reference: 'WCAG 2.1 link accessibility',
+                    location: `${linksWithoutText.length} empty or unlabeled link tags`
+                });
+            }
+        }
+
+        function analyzeForms(doc, improvements) {
+            const forms = doc.querySelectorAll('form');
+            const inputsWithoutLabels = doc.querySelectorAll('input:not([type="hidden"]):not([aria-label]):not([id])');
+            
+            if (forms.length > 0 && inputsWithoutLabels.length > 0) {
+                improvements.accessibility.push({
+                    text: `${inputsWithoutLabels.length} form input(s) missing proper labels`,
+                    reference: 'WCAG 2.1 form accessibility',
+                    location: `${inputsWithoutLabels.length} input elements without labels or IDs`
+                });
+            }
+        }
+
+        function analyzeCanonicalTags(doc, improvements) {
+            const canonicalTags = doc.querySelectorAll('link[rel="canonical"]');
+            
+            if (canonicalTags.length === 0) {
+                improvements.technical.push({
+                    text: 'Missing canonical tag - add to prevent duplicate content issues',
+                    reference: 'Google SEO technical guidelines',
+                    location: '<head> section - no canonical link found'
+                });
+            } else if (canonicalTags.length > 1) {
+                improvements.technical.push({
+                    text: 'Multiple canonical tags found - should only have one per page',
+                    reference: 'Google SEO technical guidelines',
+                    location: `${canonicalTags.length} canonical tags detected in <head>`
+                });
+            }
+        }
+
+        function analyzeMetaTags(doc, improvements) {
+            const viewport = doc.querySelector('meta[name="viewport"]');
+            const robots = doc.querySelector('meta[name="robots"]');
+            const ogTags = doc.querySelectorAll('meta[property^="og:"]');
+            
+            if (!viewport) {
+                improvements.mobile.push({
+                    text: 'Missing viewport meta tag for mobile optimization',
+                    reference: 'Google Mobile-First indexing guidelines',
+                    location: '<head> section - no viewport meta tag'
+                });
+            }
+
+            if (!robots) {
+                improvements.technical.push({
+                    text: 'Missing robots meta tag - consider adding for better crawl control',
+                    reference: 'Google crawling and indexing guide',
+                    location: '<head> section - no robots meta tag'
+                });
+            }
+
+            if (ogTags.length < 3) {
+                improvements.seo.push({
+                    text: 'Limited Open Graph tags - add more for better social sharing',
+                    reference: 'Facebook Open Graph documentation',
+                    location: `Only ${ogTags.length} Open Graph tags found in <head>`
+                });
+            }
+        }
+
+        function analyzeContentQuality(doc, improvements) {
+            const bodyText = doc.body ? doc.body.textContent : '';
+            const wordCount = bodyText.trim().split(/\s+/).length;
+            const paragraphs = doc.querySelectorAll('p');
+            const longParagraphs = Array.from(paragraphs).filter(p => p.textContent.split(/\s+/).length > 100);
+            
+            if (wordCount < 300) {
+                improvements.content.push({
+                    text: 'Content appears thin - consider adding more valuable content (aim for 300+ words)',
+                    reference: 'Google content quality guidelines',
+                    location: `Current estimated word count: ${wordCount} words`
+                });
+            }
+
+            if (longParagraphs.length > 0) {
+                improvements.content.push({
+                    text: `${longParagraphs.length} paragraph(s) are very long - break into shorter sections`,
+                    reference: 'Content readability best practices',
+                    location: `${longParagraphs.length} paragraphs with 100+ words detected`
+                });
+            }
+
+            // Check for missing publication date
+            const timeElements = doc.querySelectorAll('time[datetime], .published, .post-date');
+            if (timeElements.length === 0) {
+                improvements.content.push({
+                    text: 'Consider adding publication dates to content for better credibility',
+                    reference: 'Content trust signals',
+                    location: 'No timestamp or publication date elements found'
+                });
+            }
+        }
+
+        function analyzeMobileOptimization(doc, improvements) {
+            const viewport = doc.querySelector('meta[name="viewport"]');
+            if (viewport) {
+                const content = viewport.getAttribute('content') || '';
+                if (!content.includes('width=device-width')) {
+                    improvements.mobile.push({
+                        text: 'Viewport meta tag should include width=device-width',
+                        reference: 'Google Mobile-First indexing',
+                        location: `Current viewport content: "${content}"`
+                    });
+                }
+            }
+
+            // Check for touch-friendly elements
+            const smallClickableElements = doc.querySelectorAll('a, button');
+            let potentiallySmallElements = 0;
+            smallClickableElements.forEach(el => {
+                const style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+                // This is a basic heuristic - in production you'd want more sophisticated checking
+                if (el.textContent && el.textContent.trim().length < 3) {
+                    potentiallySmallElements++;
+                }
+            });
+
+            if (potentiallySmallElements > 5) {
+                improvements.mobile.push({
+                    text: 'Multiple small clickable elements detected - ensure adequate touch targets',
+                    reference: 'Google mobile usability guidelines',
+                    location: `${potentiallySmallElements} potentially small clickable elements`
+                });
+            }
+        }
+
+        function analyzeStructuredData(doc, improvements) {
+            const jsonLdScripts = doc.querySelectorAll('script[type="application/ld+json"]');
+            const microdataElements = doc.querySelectorAll('[itemscope]');
+            
+            if (jsonLdScripts.length === 0 && microdataElements.length === 0) {
+                improvements.seo.push({
+                    text: 'No structured data found - add schema markup for better search results',
+                    reference: 'Google structured data guidelines',
+                    location: 'No JSON-LD or microdata detected on page'
+                });
+            }
+        }
+
+        function analyzeInternalLinking(doc, improvements) {
+            const internalLinks = doc.querySelectorAll(`a[href*="${siteAnalysisData.domain}"], a[href^="/"], a[href^="./"], a[href^="../"]`);
+            const totalWords = doc.body ? doc.body.textContent.trim().split(/\s+/).length : 0;
+            
+            if (totalWords > 500 && internalLinks.length < 3) {
+                improvements.seo.push({
+                    text: 'Limited internal linking - add more links to related content',
+                    reference: 'SEO internal linking best practices',
+                    location: `Only ${internalLinks.length} internal links found in ${totalWords} words of content`
+                });
+            }
+        }
+
+        function analyzeUrlStructure(url, improvements) {
+            const urlObj = new URL(url);
+            
+            if (siteAnalysisData.isWordPressCom) {
+                improvements.wordpress.push({
+                    text: 'Confirmed WordPress.com site - perfect for our recommendations!',
+                    reference: 'WordPress.com platform identification',
+                    location: `Domain: ${urlObj.hostname}`
+                });
+            }
+            
+            if (siteAnalysisData.urlLength > 60) {
+                improvements.seo.push({
+                    text: 'URL is quite long - consider shortening for better SEO',
+                    reference: 'Google URL structure guidelines',
+                    location: `Current URL length: ${siteAnalysisData.urlLength} characters`
+                });
+            }
+            
+            if (urlObj.pathname.includes('_') || urlObj.pathname.includes('%20')) {
+                improvements.seo.
