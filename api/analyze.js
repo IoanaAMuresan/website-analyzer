@@ -185,7 +185,136 @@ function analyzeHTML(html, url, loadTime) {
             source: 'WordPress site analysis'
         });
 
-        if (!htmlLower.includes('jetpack')) {
+        // Check for basic/starter site indicators
+        const hasCustomTheme = htmlLower.includes('wp-content/themes/') && 
+                              !htmlLower.includes('twentytwenty') && 
+                              !htmlLower.includes('twentynineteen') && 
+                              !htmlLower.includes('twentyeighteen');
+        
+        const hasPlugins = htmlLower.includes('wp-content/plugins/');
+        const hasJetpack = htmlLower.includes('jetpack');
+        
+        // Look for e-commerce indicators
+        const hasEcommerce = htmlLower.includes('shop') || 
+                           htmlLower.includes('buy') || 
+                           htmlLower.includes('cart') || 
+                           htmlLower.includes('product') || 
+                           htmlLower.includes('store') || 
+                           htmlLower.includes('price') ||
+                           htmlLower.includes('
+
+    // Performance check
+    if (loadTime > 3000) {
+        performanceIssues.push({
+            text: `Page loaded in ${(loadTime/1000).toFixed(1)} seconds - should be under 3 seconds`,
+            source: 'Google Core Web Vitals'
+        });
+    }
+
+    // Check for Open Graph tags
+    if (!htmlLower.includes('property="og:title"')) {
+        seoIssues.push({
+            text: 'Missing Open Graph tags - add for better social media sharing',
+            source: 'Facebook Open Graph documentation'
+        });
+    }
+
+    // Check for viewport meta tag
+    if (!htmlLower.includes('name="viewport"')) {
+        uxIssues.push({
+            text: 'Missing viewport meta tag - important for mobile responsiveness',
+            source: 'Google Mobile-First indexing'
+        });
+    }
+
+    // Check for contact info
+    if (!htmlLower.includes('contact') && !htmlLower.includes('@') && !htmlLower.includes('email')) {
+        uxIssues.push({
+            text: 'No obvious contact information found - make it easy for users to reach you',
+            source: 'User experience best practices'
+        });
+    }
+
+    // Add some general recommendations if categories are empty
+    if (performanceIssues.length === 0) {
+        performanceIssues.push({
+            text: 'Consider implementing image optimization and caching for better performance',
+            source: 'Web performance best practices'
+        });
+    }
+
+    if (uxIssues.length === 0) {
+        uxIssues.push({
+            text: 'Add clear call-to-action buttons to guide user behavior',
+            source: 'Conversion optimization guidelines'
+        });
+    }
+
+    // Compile results
+    if (seoIssues.length > 0) {
+        results.push({
+            category: 'SEO Optimization',
+            icon: '🔍',
+            priority: 'high',
+            items: seoIssues
+        });
+    }
+
+    if (wpIssues.length > 0) {
+        results.push({
+            category: 'WordPress.com Specific',
+            icon: '⚡',
+            priority: 'high',
+            items: wpIssues
+        });
+    }
+
+    if (performanceIssues.length > 0) {
+        results.push({
+            category: 'Performance',
+            icon: '🚀',
+            priority: 'medium',
+            items: performanceIssues
+        });
+    }
+
+    if (uxIssues.length > 0) {
+        results.push({
+            category: 'User Experience',
+            icon: '👤',
+            priority: 'medium',
+            items: uxIssues
+        });
+    }
+
+    if (accessibilityIssues.length > 0) {
+        results.push({
+            category: 'Accessibility',
+            icon: '♿',
+            priority: 'low',
+            items: accessibilityIssues
+        });
+    }
+
+    return results;
+});
+
+        // Recommend Business plan for basic sites or e-commerce needs
+        if (!hasCustomTheme && !hasPlugins) {
+            wpIssues.push({
+                text: 'Consider upgrading to WordPress.com Business plan for advanced customization and SEO tools',
+                source: 'WordPress.com plan recommendations for growing sites'
+            });
+        }
+
+        if (hasEcommerce && !htmlLower.includes('woocommerce')) {
+            wpIssues.push({
+                text: 'Site mentions products/shopping - consider WordPress.com Business plan with WooCommerce for e-commerce',
+                source: 'E-commerce functionality analysis'
+            });
+        }
+
+        if (!hasJetpack) {
             wpIssues.push({
                 text: 'Consider installing Jetpack for enhanced performance and security',
                 source: 'WordPress.com recommendations'
